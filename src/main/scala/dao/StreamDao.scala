@@ -2,10 +2,11 @@ package dao
 
 import com.google.inject.Singleton
 import org.apache.kafka.clients.consumer.ConsumerRecord
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.apache.spark._
 import org.apache.spark.streaming.dstream.{DStream, InputDStream}
-import org.apache.spark.streaming.kafka010.{ConsumerStrategies, KafkaUtils, LocationStrategies}
+import org.apache.spark.streaming.kafka010.{ConsumerStrategies, HasOffsetRanges, KafkaUtils, LocationStrategies}
 import org.apache.spark.streaming.{Duration, StreamingContext}
 import play.api.libs.json._
 import org.joda.time.DateTime
@@ -36,11 +37,20 @@ object StreamDao extends StreamDao {
     val ssc:StreamingContext = new StreamingContext(conf, batchDuration)
 //    val sc:SparkContext = new SparkContext(conf)
 
+    // TODO : Enforce exactly-once semantics. Store the offset and start reading from there
+    //val fromOffsets = selectOffsetsFromYourDatabase.map { resultSet =>
+    //  new TopicPartition(resultSet.string("topic"), resultSet.int("partition")) -> resultSet.long("offset")
+    //}.toMap
+
     println("Config Setup - Done. Start Stream Processing...")
     val stream: InputDStream[ConsumerRecord[String,String]] = KafkaUtils.createDirectStream(ssc, LocationStrategies.PreferConsistent
       , ConsumerStrategies.Subscribe(topics, kafkaParams))
 
-    val result =  stream.map(each => extractKeys(each.value))
+    // For idempotent pipelines, refer : https://spark.apache.org/docs/latest/streaming-kafka-0-10-integration.html#kafka-itself
+    val result =  stream.map(each => {
+      val offsetRanges = each.asInstanceOf[HasOffsetRanges].offsetRanges
+      extractKeys(each.value)
+    })
       .map(info => Tuple2(info(3), Tuple2(
         Integer.parseInt(info(0).toString())
         , Integer.parseInt(info(2).toString()))

@@ -18,7 +18,13 @@ libraryDependencies ++= Seq(
   "org.apache.spark" %% "spark-sql" % sparkVersion,
   "com.typesafe.play" %% "play-json" % playVersion,
   // https://mvnrepository.com/artifact/org.apache.spark/spark-streaming-kafka-0-10
-  "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion
+  "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion,
+  // https://mvnrepository.com/artifact/org.mongodb/casbah
+  "org.mongodb" %% "casbah" % "3.1.1" pomOnly(),
+  // https://mvnrepository.com/artifact/com.typesafe/config
+  "com.typesafe" % "config" % "1.2.1"
+
+
 
 
 )
