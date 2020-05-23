@@ -1,6 +1,7 @@
 package dao
 
 import com.google.inject.Singleton
+import models.{Reports, TopicOffset}
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -10,6 +11,7 @@ import org.apache.spark.streaming.kafka010.{ConsumerStrategies, HasOffsetRanges,
 import org.apache.spark.streaming.{Duration, StreamingContext}
 import play.api.libs.json._
 import org.joda.time.DateTime
+import dao.MongoDao
 
 @Singleton
 class StreamDao {
@@ -38,34 +40,79 @@ object StreamDao extends StreamDao {
 //    val sc:SparkContext = new SparkContext(conf)
 
     // TODO : Enforce exactly-once semantics. Store the offset and start reading from there
-    //val fromOffsets = selectOffsetsFromYourDatabase.map { resultSet =>
-    //  new TopicPartition(resultSet.string("topic"), resultSet.int("partition")) -> resultSet.long("offset")
-    //}.toMap
+    val fromOffsets = MongoDao.getTopicOffset().map(resultSet => {
+      println(s"topic : ${resultSet.topic} partitions: ${resultSet.partition} offset: ${resultSet.offset}")
+      new TopicPartition(resultSet.topic, resultSet.partition) -> resultSet.offset
+    }
+    ).toMap
 
     println("Config Setup - Done. Start Stream Processing...")
     val stream: InputDStream[ConsumerRecord[String,String]] = KafkaUtils.createDirectStream(ssc, LocationStrategies.PreferConsistent
-      , ConsumerStrategies.Subscribe(topics, kafkaParams))
+      , ConsumerStrategies.Assign(fromOffsets.keys.toList, kafkaParams, fromOffsets))
+        //, ConsumerStrategies.Subscribe(topics, kafkaParams))
 
     // For idempotent pipelines, refer : https://spark.apache.org/docs/latest/streaming-kafka-0-10-integration.html#kafka-itself
-    val result =  stream.map(each => {
+    val result =  stream.foreachRDD( each => {
       val offsetRanges = each.asInstanceOf[HasOffsetRanges].offsetRanges
-      extractKeys(each.value)
-    })
-      .map(info => Tuple2(info(3), Tuple2(
-        Integer.parseInt(info(0).toString())
-        , Integer.parseInt(info(2).toString()))
-      )).reduceByKey(reduceTuple)
-    .foreachRDD(_.collect()
-      .foreach(element =>{
-        println(s"for the key : ${element._1.toString().replace("T"," ")}:00 " +
-          s"| total_online_drivers : ${element._2._1} | available_drivers : ${element._2._2}")
-      })
-    )
+      each.map(row => {
+        println(s"Meta Info: partition Number: ${row.partition()} offset : ${row.offset()} |Key info : ${row.key()}")
+        (TopicOffset(
+          topic=row.topic(),
+          partition=row.partition(),
+          offset=row.offset()
+        ), extractKeys(row.value())
+        )
+      }
+      )
+      .map( metaAndVal => {
+        val info = metaAndVal._2
+        Tuple2(info(3), Tuple3(
+          Integer.parseInt(info(0).toString())
+          , Integer.parseInt(info(2).toString())
+          , metaAndVal._1)
+        )
+      }).reduceByKey(reduceTuple)
+      //.foreachRDD(_
+        .collect()
+        .foreach(element => {
+          val timeBucket = s"${
+            element._1.toString().replace("T", " ")
+              .stripPrefix("\"")
+              .stripSuffix("\"")
+          }:00"
+          //println("Time Bucket : " + timeBucket)
 
-//    val dataset:RDD[String] = sc.textFile("/home/training/interviews/lalamove/data_1.json")
-//    dataset.map(each => {
-//      extractKeys(each)
-//    })
+          // Now first check if there is an existing entry for timebucket
+          // If yes, then add the current delta to existing counts
+          // Else, add a new record using mongoDb connector
+
+          MongoDao.getSingleDocument(timeBucket) match {
+            case Some(found) => {
+                println(s"Existing DB Record for $timeBucket : $found")
+                val historical = Reports.jsonToReportSerializer(found)
+                val newUpdateRecord = Reports(
+                  timeBucket,
+                  historical.driversOnlineCount + element._2._1,
+                  historical.driversAvailableCount + element._2._2
+                )
+                MongoDao.saveTimeReport(newUpdateRecord)
+            }
+            case None => {
+              println(s"Existing DB Record for $timeBucket not found")
+              val newUpdateRecord = Reports(
+                timeBucket,
+                element._2._1,
+                element._2._2
+              )
+              MongoDao.saveTimeReport(newUpdateRecord)
+
+            }
+          }
+
+          println(s"for the key : ${element._1.toString().replace("T", " ")}:00 " +
+            s"| total_online_drivers : ${element._2._1} | available_drivers : ${element._2._2}")
+        })
+    })
 
     ssc.start()
     ssc.awaitTermination()
@@ -74,18 +121,22 @@ object StreamDao extends StreamDao {
   }
 
   // a function to reduceByKey the tuples returned ( driver_online, driver_available)
-  private def reduceTuple(a:(Int,Int), b:(Int, Int) ) = {
-    (a._1 + b._1 , a._2 + b._2)
+  private def reduceTuple(a:(Int,Int,TopicOffset), b:(Int, Int,TopicOffset) ) : (Int, Int, List[TopicOffset]) = {
+    (a._1 + b._1 , a._2 + b._2,
+    List(a._3,b._3)
+    )
   }
 
   def extractKeys(value:String): List[JsValue] ={
     val json : JsValue = Json.parse(value)
     //println(json)
     val driverid = (json \ "driver_id").getOrElse(JsString("0"))
-    //val tmp : JsValue = JsString("1")
+
+    // compares that the driverId is numeric non-zero, so count the record as heartbeat from driver
     val driverFlag = if (driverid.toString().contentEquals("0")) driverid else JsNumber(1):JsValue
+
     val timestamp = (json \ "timestamp").getOrElse(Json.parse("{\"timestamp\" : \"NA\"}"))
-    println("Timestamp read : " + timestamp)
+    //println("Timestamp read : " + timestamp)
     val onDuty = (json \ "on_duty").getOrElse(Json.parse("{\"on_duty\" : \"NA\"}"))
     val timeBucket :JsValue = {
       val strTs = timestamp.toString()

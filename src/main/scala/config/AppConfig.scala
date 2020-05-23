@@ -10,6 +10,10 @@ class AppConfig {
   // kafka meta table stores the offset for the consumer group
   val kafkaMetaInfo = config.getString("kafka.metaTable")
   val kafkaTopic = config.getString("kafka.topic")
+  val kafkaGroupId = config.getString("kafka.groupId")
+
+  // summary of the timewise report
+  val reportSummary = config.getString("db.mongo.collections.reportSummary")
 
 }
 
