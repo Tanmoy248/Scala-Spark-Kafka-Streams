@@ -11,7 +11,6 @@ import org.apache.spark.streaming.kafka010.{ConsumerStrategies, HasOffsetRanges,
 import org.apache.spark.streaming.{Duration, StreamingContext}
 import play.api.libs.json._
 import org.joda.time.DateTime
-import dao.MongoDao
 
 @Singleton
 class StreamDao {
@@ -52,6 +51,10 @@ object StreamDao extends StreamDao {
         //, ConsumerStrategies.Subscribe(topics, kafkaParams))
 
     // For idempotent pipelines, refer : https://spark.apache.org/docs/latest/streaming-kafka-0-10-integration.html#kafka-itself
+    // In the direct steram, spark-kafka stream will create 1 RDD for each partition of the topic.
+    // Hence, we can simply save the max(offset) for a given topic and partition in mongo
+    // This offset will be used in the next streaming context startup, if the app crashes
+
     val result =  stream.foreachRDD( each => {
       val offsetRanges = each.asInstanceOf[HasOffsetRanges].offsetRanges
       each.map(row => {
@@ -66,14 +69,14 @@ object StreamDao extends StreamDao {
       )
       .map( metaAndVal => {
         val info = metaAndVal._2
-        Tuple2(info(3), Tuple3(
+        Tuple2(info(3), (
           Integer.parseInt(info(0).toString())
           , Integer.parseInt(info(2).toString())
           , metaAndVal._1)
         )
       }).reduceByKey(reduceTuple)
       //.foreachRDD(_
-        .collect()
+        .collect().sortBy(row => row._1.toString())
         .foreach(element => {
           val timeBucket = s"${
             element._1.toString().replace("T", " ")
@@ -95,7 +98,11 @@ object StreamDao extends StreamDao {
                   historical.driversOnlineCount + element._2._1,
                   historical.driversAvailableCount + element._2._2
                 )
-                MongoDao.saveTimeReport(newUpdateRecord)
+              println("saving the offset" + element._2._3)
+              println(s"timestamp : ${newUpdateRecord.timeBucket}" +
+                s"| total_online_drivers : ${newUpdateRecord.driversOnlineCount} | available_drivers : ${newUpdateRecord.driversAvailableCount}")
+                if (MongoDao.saveTimeReport(newUpdateRecord))
+                  MongoDao.saveOffset(element._2._3)
             }
             case None => {
               println(s"Existing DB Record for $timeBucket not found")
@@ -104,13 +111,13 @@ object StreamDao extends StreamDao {
                 element._2._1,
                 element._2._2
               )
-              MongoDao.saveTimeReport(newUpdateRecord)
+              if (MongoDao.saveTimeReport(newUpdateRecord))
+                MongoDao.saveOffset(element._2._3)
 
             }
           }
 
-          println(s"for the key : ${element._1.toString().replace("T", " ")}:00 " +
-            s"| total_online_drivers : ${element._2._1} | available_drivers : ${element._2._2}")
+
         })
     })
 
@@ -120,10 +127,13 @@ object StreamDao extends StreamDao {
     ssc.stop()
   }
 
-  // a function to reduceByKey the tuples returned ( driver_online, driver_available)
-  private def reduceTuple(a:(Int,Int,TopicOffset), b:(Int, Int,TopicOffset) ) : (Int, Int, List[TopicOffset]) = {
+  // a function to reduceByKey the tuples returned ( driver_online, driver_available, TopicOffset that has max offset)
+  private def reduceTuple(a:(Int,Int,TopicOffset), b:(Int, Int,TopicOffset) ) : (Int, Int, TopicOffset) = {
     (a._1 + b._1 , a._2 + b._2,
-    List(a._3,b._3)
+    if (a._3.topic.contentEquals(b._3.topic) && a._3.partition == b._3.partition){
+      if(a._3.offset > b._3.offset) a._3 else b._3
+    }
+    else b._3
     )
   }
 

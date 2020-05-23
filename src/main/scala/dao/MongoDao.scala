@@ -47,6 +47,9 @@ class MongoDao @Inject() (appConfig: AppConfig) {
     val searchQuery = new BasicDBObject("topic", topicOffset.topic)
       .append("partition", topicOffset.partition)
     val newValue = new BasicDBObject("offset", topicOffset.offset)
+    val updateOps = new BasicDBObject("$set", newValue)
+
+    metaCollection.update(searchQuery, updateOps,true, false).wasAcknowledged()
 
   }
 
