@@ -28,12 +28,20 @@ For idempotent pipelines, refer : https://spark.apache.org/docs/latest/streaming
 *Common Errors and Fixes:*
 1. Kafka network issues; check that the `kafka-python` entry is valid in /etc/hosts of executor-machine and kafka-docker
 Kafka docker machine should have /etc/hosts like this :
-
-    127.0.0.1	localhost
+```
+    >127.0.0.1	localhost
     ::1	localhost ip6-localhost ip6-loopback
     fe00::0	ip6-localnet
     ff00::0	ip6-mcastprefix
     ff02::1	ip6-allnodes
     ff02::2	ip6-allrouters
     172.18.0.3    kafka-python
-    
+```
+
+To rerun after mongodb cleanup:
+ > db.kafka_meta_table.remove({})
+   WriteResult({ "nRemoved" : 1 })
+   > db.report_summary.remove({})
+   WriteResult({ "nRemoved" : 6 })    
+
+Now change the consumer-group in application.conf and rerun
