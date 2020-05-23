@@ -4,6 +4,7 @@ import config.AppConfig
 
 object Main extends App{
   println("Starting the App...")
+
   val topics = List(AppConfig.kafkaTopic)
   val groupId = AppConfig.kafkaGroupId
   val bootstrapServers = "kafka-python:9092"
