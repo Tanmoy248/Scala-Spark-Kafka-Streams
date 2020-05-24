@@ -11,6 +11,7 @@ class AppConfig {
   val kafkaMetaInfo = config.getString("kafka.metaTable")
   val kafkaTopic = config.getString("kafka.topic")
   val kafkaGroupId = config.getString("kafka.groupId")
+  val kafkaBrokers = config.getString("kafka.brokers")
 
   // summary of the timewise report
   val reportSummary = config.getString("db.mongo.collections.reportSummary")
