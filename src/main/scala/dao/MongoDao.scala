@@ -16,8 +16,12 @@ import com.mongodb.client.model.Updates._
 
 @Singleton
 class MongoDao @Inject() (appConfig: AppConfig) {
-  val mongoClient = MongoClient("mongo-dev", 27017)
+  val mongoClient = MongoClient(appConfig.mongoHost, appConfig.mongoPort)
   val db = mongoClient.getDB(appConfig.mongoDbName)
+
+  def setup() = {
+//    d(appConfig.mongoDbName).
+  }
 
   def getTopicOffset():List[TopicOffset] = {
     val result = db.getCollection(appConfig.kafkaMetaInfo).find().toArray

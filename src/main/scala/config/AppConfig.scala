@@ -7,6 +7,8 @@ import javax.inject.Singleton
 class AppConfig {
   val config = ConfigFactory.load()
   val mongoDbName = config.getString("db.mongo.dbname")
+  val mongoHost = config.getString("db.mongo.host")
+  val mongoPort = config.getInt("db.mongo.port")
   // kafka meta table stores the offset for the consumer group
   val kafkaMetaInfo = config.getString("kafka.metaTable")
   val kafkaTopic = config.getString("kafka.topic")
