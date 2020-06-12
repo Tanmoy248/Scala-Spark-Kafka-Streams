@@ -80,3 +80,5 @@ class MongoDao @Inject() (appConfig: AppConfig) {
 object MongoDao extends MongoDao(AppConfig){
 
 }
+
+
