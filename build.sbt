@@ -34,7 +34,7 @@ libraryDependencies ++= Seq(
   // add play framework support
   "com.typesafe.play" %% "play" % playVersion,
   // https://mvnrepository.com/artifact/org.mongodb.scala/mongo-scala-driver
-  "org.mongodb.scala" %% "mongo-scala-driver" % "4.0.2"
+  "org.mongodb.scala" %% "mongo-scala-driver" % "2.7.0"
 
 )
   )
