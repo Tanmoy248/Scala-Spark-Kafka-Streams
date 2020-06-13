@@ -4,7 +4,7 @@ import com.typesafe.config.ConfigFactory
 import javax.inject.Singleton
 
 @Singleton
-class AppConfig {
+class AppConfig{
   val config = ConfigFactory.load()
   val mongoDbName = config.getString("db.mongo.dbname")
   val mongoHost = config.getString("db.mongo.host")
@@ -21,3 +21,8 @@ class AppConfig {
 }
 
 object AppConfig extends AppConfig
+
+//object Runner extends App{
+//  val obj = new AppConfig
+//  println(obj.config)
+//}
