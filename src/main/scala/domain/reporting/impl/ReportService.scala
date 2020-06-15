@@ -14,7 +14,7 @@ class ReportService @Inject() (mongo: MongoDao) {
     val daoResult = mongo.getAllSummary
     val accumulator : List[String] = List.empty
     val (status,result) = recursiveTransform(daoResult, accumulator )
-    (status, s"""{"result" : ${result.mkString("[\n", ",\n", "\n]")}}""")
+    (status, s"""${result.mkString("[",",\n", "]")}""")
   }
 
   private def recursiveTransform(input:Vector[String], accumulator: List[String]): (Boolean, List[String]) = {
