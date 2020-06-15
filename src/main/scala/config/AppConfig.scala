@@ -18,6 +18,9 @@ class AppConfig{
   // summary of the timewise report
   val reportSummary = config.getString("db.mongo.collections.reportSummary")
 
+  // business decided date format
+  val dateFmt = config.getString("date.format")
+
 }
 
 object AppConfig extends AppConfig
