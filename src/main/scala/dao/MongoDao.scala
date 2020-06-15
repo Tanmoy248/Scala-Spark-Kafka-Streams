@@ -75,8 +75,15 @@ class MongoDao @Inject() (appConfig: AppConfig) {
       .toList.headOption.map(_.toString)
   }
 
+  def getAllSummary:Vector[String] = {
+    db.getCollection(appConfig.reportSummary)
+      .find().toArray().asScala.toVector.map(_.toString)
+  }
+
 }
 
 object MongoDao extends MongoDao(AppConfig){
 
 }
+
+

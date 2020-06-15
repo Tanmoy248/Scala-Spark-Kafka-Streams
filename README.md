@@ -102,3 +102,7 @@ d8f8221cc741        mongo:latest             "docker-entrypoint.s…"   4 days a
 90ddf2fb0bf2        wurstmeister/zookeeper   "/bin/sh -c '/usr/sb…"   7 days ago          Up 24 hours                22/tcp, 2888/tcp, 3888/tcp, 0.0.0.0:2181->2181/tcp   kafka-docker_zookeeper_1
 
 ```
+
+#Issues:
+Common issues observed in spark-kafka-streaming:
+1. `Offsets out of range with no configured reset policy for partitions` - This happens if the offset requested by spark has been purged by kafka due to `kafka.retention.policy` . The solution is to start using a new topic, upgrade the producer and consumer configs accordingly. Setting the `kafka.offset.reset = "latest"` does not solve the problem ( Spark/kafka bug)
