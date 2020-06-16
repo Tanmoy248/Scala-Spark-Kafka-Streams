@@ -1,6 +1,9 @@
 **Software versions:**
-Spark - 3.0.0-preview2
-KafkaUtils - Streaming app between spark and kafka
+
+1. Spark - 3.0.0-preview2
+2. KafkaUtils - Streaming app between spark and kafka
+3. Scala - 2.12
+4. sbt
 
 Built this code with reference from : `https://spark.apache.org/docs/1.6.3/streaming-kafka-integration.html`
 
@@ -9,7 +12,7 @@ Live data being pushed from user mobile to kafka.
 Use streaming apps to report the people online and people available in last `n minutes`
 
 Next Steps:
-1. Persist the counts to DB, alongwith time, to create trends
+1. ~~Persist the counts to DB, alongwith time, to create trends~~
 2. Maintain a map so that late-arriving health pings are accounted for in the reports
 
 Docker Images and setup:
