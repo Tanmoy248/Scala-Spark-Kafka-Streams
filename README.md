@@ -106,3 +106,6 @@ d8f8221cc741        mongo:latest             "docker-entrypoint.s…"   4 days a
 #Issues:
 Common issues observed in spark-kafka-streaming:
 1. `Offsets out of range with no configured reset policy for partitions` - This happens if the offset requested by spark has been purged by kafka due to `kafka.retention.policy` . The solution is to start using a new topic, upgrade the producer and consumer configs accordingly. Setting the `kafka.offset.reset = "latest"` does not solve the problem ( Spark/kafka bug)
+
+Sample Visualization of the Available vs Online Drivers :
+![alt text](images/Sample_Visualization.png)

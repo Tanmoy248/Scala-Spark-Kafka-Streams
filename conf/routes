@@ -4,7 +4,9 @@
 # ~~~~
 
 # An example controller showing a sample home page
-GET     /                                   controllers.HomeController.index
+# TODO Add a health-check controller to / and move reports to /reports
+#GET     /                                   controllers.HomeController.index
+GET     /reports                            controllers.HomeController.reports(from: Option[String], to: Option[String])
 #GET     /explore                            controllers.HomeController.explore
 #GET     /tutorial                           controllers.HomeController.tutorial
 
