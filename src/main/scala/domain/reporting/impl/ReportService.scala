@@ -12,14 +12,21 @@ class ReportService @Inject() (mongo: MongoDao
                                , helper : Helper) {
   // In the service layer, we resolve dao exceptions and return proper error messages
   // Or we can let the caller handle the error based on method  signature
-  def renderReportsJson : (Boolean, String) = {
+  def renderReportsJson(from : Option[Long] = None, to: Option[Long] = None) : (Boolean, String) = {
     val daoResult = mongo.getAllSummary
     val accumulator : List[(Long,String)] = List.empty
     val (status,result) = recursiveTransform(daoResult, accumulator )
 
     // TODO Check for optimization later
-    // return a sorted result on time
-    val sortedResult = result.sorted.map(_._2)
+    // return sorted result based on time, filter if from,to is non-empty
+    val sortedResult = (from, to) match {
+      case (Some(f), Some(t)) => result.sorted.filter(_._1 >= f).filter(_._1 <= t).map(_._2)
+      case (Some(f), None) =>  {
+        println("f : " + f)
+        result.sorted.filter(_._1 >= f).map(_._2)}
+      case (None, Some(t)) =>  result.sorted.filter(_._1 <= t).map(_._2)
+      case (None, None) => result.sorted.map(_._2)
+    }
 
     (status, s"""${sortedResult.mkString("[",",\n", "]")}""")
   }
@@ -40,9 +47,10 @@ class ReportService @Inject() (mongo: MongoDao
     val input = Try(Json.parse(summaryRow)).map(
       each => {
         val timeBucket = (each \\ "timeBucket")(0)
-        println(timeBucket)
+        //println(timeBucket)
         val driversAvailableCount = (each \\ "driversAvailableCount")(0)
         val driversOnlineCount = (each \\ "driversOnlineCount")(0)
+
         val sortKey = helper.parseStringToLong(timeBucket.as[String])
         (sortKey, s"""{"time" : ${timeBucket}, "available" : $driversAvailableCount , "online" : $driversOnlineCount}""")
       }

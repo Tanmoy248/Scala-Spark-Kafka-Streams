@@ -12,11 +12,10 @@ class Helper @Inject() (config: AppConfig) {
   def parseStringToLong(input : String) : Long = {
     val dateFmt = config.dateFmt
     val dateFormat = new SimpleDateFormat(dateFmt)
-    println(s"Parsed Date : $dateFormat")
+    //println(s"Input Date : $input")
 
     dateFormat.parse(input).getTime
   }
-
 }
 
 object Helper extends Helper(AppConfig)

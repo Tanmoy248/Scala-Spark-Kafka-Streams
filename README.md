@@ -1,6 +1,9 @@
 **Software versions:**
-Spark - 3.0.0-preview2
-KafkaUtils - Streaming app between spark and kafka
+
+1. Spark - 3.0.0-preview2
+2. KafkaUtils - Streaming app between spark and kafka
+3. Scala - 2.12
+4. sbt
 
 Built this code with reference from : `https://spark.apache.org/docs/1.6.3/streaming-kafka-integration.html`
 
@@ -9,7 +12,7 @@ Live data being pushed from user mobile to kafka.
 Use streaming apps to report the people online and people available in last `n minutes`
 
 Next Steps:
-1. Persist the counts to DB, alongwith time, to create trends
+1. ~~Persist the counts to DB, alongwith time, to create trends~~
 2. Maintain a map so that late-arriving health pings are accounted for in the reports
 
 Docker Images and setup:
@@ -106,3 +109,6 @@ d8f8221cc741        mongo:latest             "docker-entrypoint.s…"   4 days a
 #Issues:
 Common issues observed in spark-kafka-streaming:
 1. `Offsets out of range with no configured reset policy for partitions` - This happens if the offset requested by spark has been purged by kafka due to `kafka.retention.policy` . The solution is to start using a new topic, upgrade the producer and consumer configs accordingly. Setting the `kafka.offset.reset = "latest"` does not solve the problem ( Spark/kafka bug)
+
+Sample Visualization of the Available vs Online Drivers :
+![alt text](images/Sample_Visualization.png)
