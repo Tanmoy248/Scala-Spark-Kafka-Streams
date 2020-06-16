@@ -24,27 +24,33 @@ class MongoDao @Inject() (appConfig: AppConfig) {
   }
 
   def getTopicOffset():List[TopicOffset] = {
-    val result = db.getCollection(appConfig.kafkaMetaInfo).find().toArray
-    if (result.size() > 0) {
-      result.asScala.toList.map(
-        each => {
-          val jsonResult = Json.parse(each.toString)
-          println(jsonResult)
-          TopicOffset(topic = appConfig.kafkaTopic,
-            partition = Integer.parseInt((jsonResult \ "partition").getOrElse(JsNumber(0)).toString),
-            offset = Integer.parseInt((jsonResult \ "offset").getOrElse(JsNumber(0)).toString).toLong
-          )
-        }
+    val query = DBObject("topic" -> appConfig.kafkaTopic)
+    val result = Option(db.getCollection(appConfig.kafkaMetaInfo).find(query).toArray())
+    println("TRACE-2 ----->")
+    println(result.toString)
+
+    // If result not found, reset to 0
+    result.map(each => {
+      // the reason for having the asScala is to iterate over the list (incase of multi partition topic)
+      each.asScala.map(topicPartitions => {
+        println("TRACE - 3 ---> " + topicPartitions.toString())
+        val jsonResult = Json.parse(topicPartitions.toString)
+        println(jsonResult)
+        TopicOffset(topic = appConfig.kafkaTopic,
+          partition = Integer.parseInt((jsonResult \ "partition").getOrElse(JsNumber(0)).toString),
+          offset = Integer.parseInt((jsonResult \ "offset").getOrElse(JsNumber(0)).toString).toLong
+        )
+      }
       )
-    }
-    else{
-      List(TopicOffset(
-        topic=appConfig.kafkaTopic,
-        partition=0,
-        offset=0
-      ))
-    }
+    }).getOrElse({
+        List(TopicOffset(
+          topic = appConfig.kafkaTopic,
+          partition = 0,
+          offset = 0
+        ))
+      }).toList
   }
+
 
   def saveOffset(topicOffset: TopicOffset) = {
     val metaCollection = db.getCollection(appConfig.kafkaMetaInfo)
