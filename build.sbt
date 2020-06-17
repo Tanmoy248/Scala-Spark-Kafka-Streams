@@ -34,7 +34,11 @@ libraryDependencies ++= Seq(
   // add play framework support
   "com.typesafe.play" %% "play" % playVersion,
   // https://mvnrepository.com/artifact/org.mongodb.scala/mongo-scala-driver
-  "org.mongodb.scala" %% "mongo-scala-driver" % "2.7.0"
+  "org.mongodb.scala" %% "mongo-scala-driver" % "2.7.0",
+  // scala testing libs
+  //"org.scalactic" %% "scalactic" % "3.1.2",
+  // https://mvnrepository.com/artifact/org.scalatest/scalatest
+  "org.scalatest" %% "scalatest" % "3.0.8" % Test
 
 )
   )

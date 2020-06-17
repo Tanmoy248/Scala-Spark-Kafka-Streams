@@ -25,14 +25,20 @@ class MongoDao @Inject() (appConfig: AppConfig) {
 
   def getTopicOffset():List[TopicOffset] = {
     val query = DBObject("topic" -> appConfig.kafkaTopic)
-    val result = Option(db.getCollection(appConfig.kafkaMetaInfo).find(query).toArray())
-    println("TRACE-2 ----->")
+    val dbResult = db.getCollection(appConfig.kafkaMetaInfo).find(query).toArray().asScala.toVector
+    val result : Option[Vector[DBObject]] = dbResult match {
+        // match on type and have an if-guard in place
+      case value: Vector[DBObject] if (value.size > 0) => Option(value)
+      case _ => None
+    }
+
+    println("TRACE-2 ----->" + query.toString)
     println(result.toString)
 
     // If result not found, reset to 0
     result.map(each => {
       // the reason for having the asScala is to iterate over the list (incase of multi partition topic)
-      each.asScala.map(topicPartitions => {
+      each.map(topicPartitions => {
         println("TRACE - 3 ---> " + topicPartitions.toString())
         val jsonResult = Json.parse(topicPartitions.toString)
         println(jsonResult)
